@@ -10,6 +10,14 @@ using Newtonsoft.Json;
 
 namespace DistributeVMs
 {
+	/// <summary>
+	/// DistributeVMs
+	/// 
+	/// Commandline tool for equally distributing VMs to a set of given Hypervisors (both defined in seperate json files).
+	/// 
+	/// Usage: DistributeVMs [path to json files]
+	/// 
+	/// </summary>
 	class Program
 	{
 		private const string CONF_KEY_FILENAME_HYPERVISOR = "FilenameHypervisor";
@@ -20,8 +28,7 @@ namespace DistributeVMs
 
 		static void Main(string[] args)
 		{
-			bool profile = false;
-
+			// Get default path and filenames from the .config file
 			_path = ConfigurationManager.AppSettings[CONF_KEY_DEFAULTPATH] ?? "./";
 			string filenameHypervisor = ConfigurationManager.AppSettings[CONF_KEY_FILENAME_HYPERVISOR] ?? "hypervisor.json";
 			string filenameVms = ConfigurationManager.AppSettings[CONF_KEY_FILENAME_VMS] ?? "vms.json";
@@ -31,81 +38,28 @@ namespace DistributeVMs
 				return;
 			}
 
-			if (profile)
+			// Import the VMs and Hypervisors from the json files
+			List<Hypervisor> hypervisors = ReadHypervisors(Path.Combine(_path, filenameHypervisor));
+			List<Vm> vms = ReadVms(Path.Combine(_path, filenameVms));
+
+			// If one of the Lists is empty, something went wrong => return
+			if (hypervisors == null || vms == null)
 			{
-				Profile(200, 3, 4);
+				return;
 			}
-			else
+
+			var hvManager = new HypervisorManager(hypervisors);
+
+			// Distribute the Vms one after another to the Hypervisors.
+			// If intermediate Results should be logged to the Console, move the 'Console.WriteLine' statement into the foreach-block.
+			foreach (var vm in vms)
 			{
-				var hypervisors = ReadHypervisors(Path.Combine(_path, filenameHypervisor));
-				var vms = ReadVms(Path.Combine(_path, filenameVms));
-
-				if (hypervisors == null || vms == null)
-				{
-					return;
-				}
-
-				var hvManager = new HypervisorManager(hypervisors);
-
-				foreach (var vm in vms)
-				{
-					hvManager.AddVm(vm);
-				}
-				Console.WriteLine(hvManager.GetJsonResultString());
+				hvManager.AddVm(vm);
 			}
+
+			// Log the result to the Console.
+			Console.WriteLine(hvManager.GetJsonResultString());
 		}
-
-		private static void Profile(int numTestRuns, int numHypervisors = 250, int numVms = 1000)
-		{
-			double avgTimeAll = 0;
-			double avgDevAll = 0;
-
-			for (int tr = 0; tr < numTestRuns; tr++)
-			{
-				var hypervisors = GenerateHypervisors(numHypervisors);
-				var vms = GenerateVms(numVms);
-				
-				var hvManager = new HypervisorManager(hypervisors);
-			
-				double avgTime = 0;
-				int i = 0;
-
-				Stopwatch stopwatch = new Stopwatch();
-				
-				foreach (var vm in vms)
-				{
-
-					stopwatch.Reset();
-					stopwatch.Start();
-					hvManager.AddVm(vm);
-					stopwatch.Stop();
-
-					var ts = stopwatch.Elapsed;
-					avgTime += ts.TotalMilliseconds;
-					i++;
-				}
-
-				avgTimeAll += (avgTime / i);
-				avgDevAll += hvManager.GetAverageDeviation();
-			}
-			
-			Console.WriteLine($"Average time: {avgTimeAll / numTestRuns}ms Average deviation: {avgDevAll / numTestRuns}%");
-		}
-
-		private static List<Hypervisor> GenerateHypervisors(int num)
-		{
-			Random rnd = new Random();
-			int[] sizes = { 512, 1024, 2048, 4096, 8192 };
-			return Enumerable.Range(1, num).Select(i => new Hypervisor($"hypervisor{i}", sizes[rnd.Next(sizes.Length)]) ).ToList();
-		}
-
-		private static List<Vm> GenerateVms(int num)
-		{
-			Random rnd = new Random();
-			int[] sizes = { 64, 128, 256, 512 };
-			return Enumerable.Range(1, num).Select(i => new Vm($"", sizes[rnd.Next(sizes.Length)])).ToList();
-		}
-
 		
 		/// <summary>
 		/// Helper-method: Deserialize the Hypervisors from a json file, and convert the deserialized JsonModel Hypervisors 
@@ -157,6 +111,12 @@ namespace DistributeVMs
 			return vmRoot.Vms.Select(vmj => new Vm(vmj)).ToList();
 		}
 
+		/// <summary>
+		/// Helper method: Deserialiaze a json file to an (root-) object of type <typeparamref name="T"/>.
+		/// </summary>
+		/// <typeparam name="T">Type of the root object, the file should be deserialized to.</typeparam>
+		/// <param name="filename">Path and filename of the Json file.</param>
+		/// <returns>A deserialized root object of Typr <typeparamref name="T"/></returns>
 		private static T DeserializeJsonFromFile<T>(string filename) where T : class
 		{
 			T rootObject = null;
@@ -169,11 +129,11 @@ namespace DistributeVMs
 					rootObject = (T)serializer.Deserialize(file, typeof(T));
 				}
 			}
-			catch (FileNotFoundException e)
+			catch (FileNotFoundException)
 			{
 				Console.WriteLine($"Error reading file {filename}: File not found.");
 			}
-			catch (DirectoryNotFoundException e)
+			catch (DirectoryNotFoundException)
 			{
 				Console.WriteLine($"Error reading file {filename}: Directory not found.");
 			}

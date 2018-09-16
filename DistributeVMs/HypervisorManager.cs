@@ -16,7 +16,7 @@ namespace DistributeVMs
 		private List<Hypervisor> _managedHypervisors;
 
 		/// <summary>
-		/// Initialize the HypervisorManager with the hypervisors that should be managed.
+		/// Initialize the HypervisorManager with the Hypervisors that should be managed.
 		/// </summary>
 		/// <exception cref="ArgumentNullException.ArgumentNullException">
 		/// Will be thrown if <paramref name="hypervisors"/> is null.
@@ -53,9 +53,8 @@ namespace DistributeVMs
 		/// <param name="vm">The Vm that should be added to one of the managed Hypervisors</param>
 		public void AddVm(Vm vm)
 		{
-			// If there are still Hypervisors without any assigned Vms, check first if the new Vm should be added to one of them.
-			// Else find the Hypervisor were adding the Vm leads to the best result (equally distributed load).
-			Hypervisor bestCandidate = (_numFreeHypervisors > 0 ? FindBestEmptyHypervisor(vm) : null)?? FindBestHypervisor(vm);
+			// Find the Hypervisor, where adding the Vm leads to the best result (equally distributed load).
+			Hypervisor bestCandidate = FindBestHypervisor(vm);
 
 			if (bestCandidate != null)
 			{
@@ -71,31 +70,6 @@ namespace DistributeVMs
 				// No Hypervisor with enough capacity for the Vm found.
 				Console.WriteLine($"WARNING - not enough free capacity for adding Vm {vm.Id}");
 			}
-		}
-
-		/// <summary>
-		/// This method finds the best matching Hypervisor for the Vm <paramref name="vm"/> 
-		/// from the Hypervisors that currently have no Vm assigned.
-		/// </summary>
-		/// <param name="vm"></param>
-		/// <returns></returns>
-		private Hypervisor FindBestEmptyHypervisor(Vm vm)
-		{
-			Hypervisor result = null;
-			// The List of managed Hypervisors is filtered by Hypervisors without Vms (Load==0), that have enough capacity 
-			// to take the Vm (maxram <= vm.ram) and where adding the Vm would cause a maximum load of 25%.
-			// Then the Hypervisor with the lowest overall-capacity is picked.
-			// This ensures, that relatively small Vms will be assigned to relatively small empty Hypervisors,
-			// which turned out to be a good strategy to populate empty Hypervisors.
-
-			var matchingHvs = _managedHypervisors.Where(mh => mh.CurrentLoadAbsolute == 0
-													&& mh.Maxram >= vm.Ram
-													&& mh.CalcLoadAfterAddingVm(vm) <= 25);
-			if (matchingHvs.Any())
-			{
-				result = matchingHvs.Min();
-			}
-			return result;
 		}
 
 		/// <summary>
@@ -121,7 +95,8 @@ namespace DistributeVMs
 				{
 					// calculate the new load, the Hypervisor would have after adding this Vm.
 					tmpLoad[i] = hv.CalcLoadAfterAddingVm(vm);
-					// Calculate the average load, and the averate deviation from the average load for all Hypervisors.
+					// Calculate the average load of all (non empty) hypervisors, 
+					// and the average deviation from the average load for all Hypervisors.
 					var tmpAverage = tmpLoad.Sum() / tmpLoad.Where(l => l > 0).Count();
 					var tmpAverageDeviation = tmpLoad.Select(l => Math.Abs(tmpAverage - l)).Sum() / tmpLoad.Length;
 					// restore the load to its original value for the next iteration.
