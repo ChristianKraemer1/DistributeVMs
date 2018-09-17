@@ -39,10 +39,13 @@ namespace DistributeVMs
 
 			// Import the VMs and Hypervisors from the json files
 			List<Hypervisor> hypervisors = ReadHypervisors(Path.Combine(_path, filenameHypervisor));
-			List<Vm> vms = ReadVms(Path.Combine(_path, filenameVms));
+			if (hypervisors == null)
+			{
+				return;
+			}
 
-			// If one of the Lists is empty, something went wrong => return
-			if (hypervisors == null || vms == null)
+			List<Vm> vms = ReadVms(Path.Combine(_path, filenameVms));
+			if (vms == null)
 			{
 				return;
 			}
@@ -77,7 +80,7 @@ namespace DistributeVMs
 			{
 				return null;
 			}
-			if (hypervisorRoot.Hypervisors == null)
+			if (hypervisorRoot.Hypervisors == null || !hypervisorRoot.Hypervisors.Any())
 			{
 				Console.WriteLine($"No hypervisors found in file {filenameJson}");
 				return null;
@@ -105,9 +108,9 @@ namespace DistributeVMs
 				return null;
 			}
 
-			if(vmRoot.Vms == null)
+			if(vmRoot.Vms == null || !vmRoot.Vms.Any())
 			{
-				Console.WriteLine($"No hypervisors found in file {filenameJson}");
+				Console.WriteLine($"No VMs found in file {filenameJson}");
 				return null;
 			}
 			Console.WriteLine($"{vmRoot.Vms.Count} VMs read.");
