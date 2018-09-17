@@ -56,6 +56,7 @@ namespace DistributeVMs
 				hvManager.AddVm(vm);
 			}
 
+			Console.WriteLine("\r\nResult:");
 			// Log the result to the Console.
 			Console.WriteLine(hvManager.GetJsonResultString());
 		}
@@ -69,6 +70,7 @@ namespace DistributeVMs
 		/// <returns>A List of AppModel Hypervisor objects.</returns>
 		private static List<Hypervisor> ReadHypervisors(string filenameJson)
 		{
+			Console.WriteLine($"Reading Hypervisors from File {filenameJson}");
 			var hypervisorRoot = DeserializeJsonFromFile<HypervisorJsonRoot>(filenameJson);
 
 			if (hypervisorRoot == null)
@@ -80,6 +82,7 @@ namespace DistributeVMs
 				Console.WriteLine($"No hypervisors found in file {filenameJson}");
 				return null;
 			}
+			Console.WriteLine($"{hypervisorRoot.Hypervisors.Count} Hypervisors read.");
 
 			// convert deserialized json objects to AppModel objects
 			return hypervisorRoot.Hypervisors.Select(hvj => new Hypervisor(hvj)).ToList();
@@ -94,6 +97,7 @@ namespace DistributeVMs
 		/// <returns>A List of AppModel Vm objects.</returns>
 		private static List<Vm> ReadVms(string filenameJson)
 		{
+			Console.WriteLine($"Reading VMs from File {filenameJson}");
 			VmJsonRoot vmRoot = DeserializeJsonFromFile<VmJsonRoot>(filenameJson);
 
 			if (vmRoot == null)
@@ -106,6 +110,8 @@ namespace DistributeVMs
 				Console.WriteLine($"No hypervisors found in file {filenameJson}");
 				return null;
 			}
+			Console.WriteLine($"{vmRoot.Vms.Count} VMs read.");
+
 			// convert deserialized json objects to AppModel objects.
 			return vmRoot.Vms.Select(vmj => new Vm(vmj)).ToList();
 		}

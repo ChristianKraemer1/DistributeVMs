@@ -28,12 +28,13 @@ namespace DistributeVMs
 		}
 
 		/// <summary>
-		/// The average load (memory allocation) of all managed Hypervisors in percent.
+		/// The average load in percent (memory allocation) of all managed Hypervisors that are not empty.
 		/// </summary>
 		/// <returns>The average load in percent.</returns>
 		public double GetAverageLoad()
 		{
-			return _managedHypervisors.Sum(hv => hv.CurrentLoadPercent) / _managedHypervisors.Count();
+			var numUsedHypervisors = _managedHypervisors.Count - _numFreeHypervisors;
+			return (numUsedHypervisors == 0) ? 0 : _managedHypervisors.Sum(hv => hv.CurrentLoadPercent) / numUsedHypervisors;
 		}
 
 		/// <summary>
@@ -43,7 +44,7 @@ namespace DistributeVMs
 		public double GetAverageDeviation()
 		{
 			var avgLoad = GetAverageLoad();
-			return _managedHypervisors.Select(hv => Math.Abs(avgLoad - hv.CurrentLoadPercent)).Sum() / _managedHypervisors.Count();
+			return _managedHypervisors.Select(hv => Math.Abs(avgLoad - hv.CurrentLoadPercent)).Sum() / _managedHypervisors.Count;
 		}
 
 		/// <summary>
@@ -61,7 +62,7 @@ namespace DistributeVMs
 				if (bestCandidate.CurrentLoadAbsolute == 0)
 					_numFreeHypervisors--;
 
-				// Add the Vm to the determined Hypervisor.
+				// Add the Vm to the Hypervisor.
 				bestCandidate.AddVm(vm);
 			}
 			else
@@ -90,9 +91,10 @@ namespace DistributeVMs
 			{
 				var hv = _managedHypervisors[i];
 
+				// Only if the remaining capacity is large enough for the new Vm
 				if (hv.CheckIfVmFits(vm))
 				{
-					// calculate the new load, the Hypervisor would have after adding this Vm.
+					// calculate the new load of the Hypervisor after adding this Vm.
 					tmpLoad[i] = hv.CalcLoadAfterAddingVm(vm);
 					// Calculate the average load of all (non empty) hypervisors, 
 					// and the average deviation from the average load for all Hypervisors.
