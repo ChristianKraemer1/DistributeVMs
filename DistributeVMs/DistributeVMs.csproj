@@ -53,6 +53,7 @@
     <Compile Include="Model\JsonModel\HypervisorJson.cs" />
     <Compile Include="Model\JsonModel\VmJson.cs" />
     <Compile Include="Model\AppModel\Vm.cs" />
+    <Compile Include="Profiler.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

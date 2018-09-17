@@ -23,7 +23,22 @@ namespace DistributeVMs
 		private const string CONF_KEY_FILENAME_VMS = "FilenameVms";
 		private const string CONF_KEY_DEFAULTPATH = "DefaultPath";
 
+		private const string CONF_KEY_PROFILINGACTIVE = "ExecuteInProfilingMode";
+		private const string CONF_KEY_PROFILING_SAVERESULTS = "SaveLastProfilingResultToFile";
+		private const string CONF_KEY_NUMPROFILING_RUNS = "NumProfilingRuns";
+		private const string CONF_KEY_NUMPROFILING_VMS = "NumProfilingVms";
+		private const string CONF_KEY_NUMPROFILING_HYPERVISORS = "NumProfilingHypervisors";
+		
+
+
+
 		private static string _path;
+
+		private static bool _isProfilingActive = false;
+		private static bool _saveProfilingResults = false;
+		private static int _numProfilingRuns = 50;
+		private static int _numProfilingVms = 250;
+		private static int _numProfilingHypervisors = 1000;
 
 		static void Main(string[] args)
 		{
@@ -32,6 +47,16 @@ namespace DistributeVMs
 			string filenameHypervisor = ConfigurationManager.AppSettings[CONF_KEY_FILENAME_HYPERVISOR] ?? "hypervisor.json";
 			string filenameVms = ConfigurationManager.AppSettings[CONF_KEY_FILENAME_VMS] ?? "vms.json";
 
+			// Read the configuration settings for the profiling mode.
+			ReadProfilerConfiguration();
+
+			if (_isProfilingActive)
+			{
+				Profiler.Profile(_numProfilingRuns, _numProfilingHypervisors, _numProfilingVms, _saveProfilingResults);
+				return;
+			}
+
+			// Process Command-Line arguments
 			if (!ProcessArgs(args))
 			{
 				return;
@@ -172,6 +197,31 @@ namespace DistributeVMs
 			}
 
 			return true;
+		}
+
+		/// <summary>
+		/// Read the settings for the profiling mode from the Configuration
+		/// </summary>
+		private static void ReadProfilerConfiguration()
+		{
+			// Get parameters for Profilig mode, if active
+			var profileEntry = ConfigurationManager.AppSettings[CONF_KEY_PROFILINGACTIVE] ?? "false";
+			Boolean.TryParse(profileEntry, out _isProfilingActive);
+
+			if (_isProfilingActive)
+			{
+				var saveResultsEntry = ConfigurationManager.AppSettings[CONF_KEY_PROFILING_SAVERESULTS] ?? "false";
+				bool.TryParse(saveResultsEntry, out _saveProfilingResults);
+
+				var numRunsEntry = ConfigurationManager.AppSettings[CONF_KEY_NUMPROFILING_RUNS] ?? "50";
+				int.TryParse(numRunsEntry, out _numProfilingRuns);
+
+				var numVmsEntry = ConfigurationManager.AppSettings[CONF_KEY_NUMPROFILING_VMS] ?? "250";
+				int.TryParse(numVmsEntry, out _numProfilingVms);
+
+				var numHypervisorEntry = ConfigurationManager.AppSettings[CONF_KEY_NUMPROFILING_HYPERVISORS] ?? "1000";
+				int.TryParse(numHypervisorEntry, out _numProfilingHypervisors);
+			}
 		}
 	}
 }
